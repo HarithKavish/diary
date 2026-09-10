@@ -22,11 +22,22 @@ it, governance wins.
 
 ## About this repository
 
-Diary is a static personal journal, deployed as a GitHub Pages site at
-diary.harithkavish.com. No backend, no build step.
+Diary is a personal journal at diary.harithkavish.com: a static GitHub Pages shell
+(client-side router, no build step) in front of a Cloudflare Worker + D1 API mounted
+at `/api/*`. Every signed-in HarithKavish account gets public, self-editable pages
+under `/@handle`. See README.md for the layout and the sign-in flow.
 
 ## Working here
 
-No build step, no dependencies. Loads the shared design system at runtime like every
-other static surface — see README.md. No other repository-specific rules beyond global
-governance.
+- The shell (`index.html`, `app.js`, `style.css`) has no build step and no
+  dependencies — edit directly.
+- The API (`worker/`) is a Cloudflare Worker. `npm install` in `worker/` before
+  editing its TypeScript; deploy is `.github/workflows/deploy-worker.yml`, not a
+  manual `wrangler deploy`, once that workflow's `CLOUDFLARE_API_TOKEN` secret is set.
+- Diary is a registered OAuth client of `account.harithkavish.com`
+  (`lib/oauth/clients.ts` there). Changing diary's redirect URI or client id means a
+  matching change on that side, coordinated as its own scoped pull request — never
+  assume the two can drift independently.
+- `OAUTH_SECRET_DIARY` (a Worker secret) must equal the secret configured for the
+  `diary` client on account.harithkavish.com. Neither value ever appears in this
+  repository.
