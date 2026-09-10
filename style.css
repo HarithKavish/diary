@@ -25,11 +25,6 @@
     margin: var(--space-4, 1rem) 0;
 }
 
-.page-form .field-row {
-    display: flex;
-    gap: var(--space-3, 0.75rem);
-}
-
 .page-form input,
 .page-form textarea {
     font: inherit;
@@ -54,11 +49,6 @@
     gap: var(--space-3, 0.75rem);
     padding: var(--space-2, 0.5rem) 0;
     border-bottom: 1px solid var(--border, currentColor);
-}
-
-.page-list__topic {
-    color: var(--text-secondary, inherit);
-    font-size: 0.9em;
 }
 
 .page-body {
