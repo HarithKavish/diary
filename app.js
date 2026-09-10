@@ -1,6 +1,6 @@
 // Diary's client-side router. GitHub Pages has no server-side routing, so
 // every path renders through this one page -- see 404.html for how a direct
-// request for /@handle/topic/slug arrives here in the first place.
+// request for /@handle/page-name arrives here in the first place.
 (function () {
   var redirect = new URLSearchParams(location.search).get("redirect");
   if (redirect) {
@@ -40,7 +40,7 @@
     if (parts[0][0] !== "@") return { type: "not-found" };
     var handle = parts[0].slice(1);
     if (parts.length === 1) return { type: "user", handle: handle };
-    if (parts.length === 3) return { type: "page", handle: handle, topic: parts[1], slug: parts[2] };
+    if (parts.length === 2) return { type: "page", handle: handle, slug: parts[1] };
     return { type: "not-found" };
   }
 
@@ -77,26 +77,20 @@
 
   function pageForm(defaults, onSubmit) {
     var form = el("form", { class: "page-form" });
-    var topic = el("input", { placeholder: "topic (e.g. travel)", value: defaults.topic || "", required: "required" });
     var slug = el("input", { placeholder: "page name (e.g. day-one)", value: defaults.slug || "", required: "required" });
     var title = el("input", { placeholder: "title", value: defaults.title || "", required: "required" });
     var content = el("textarea", { rows: "12", placeholder: "Write here..." });
     content.value = defaults.content || "";
 
-    if (defaults.lockTopicSlug) {
-      topic.setAttribute("readonly", "readonly");
-      slug.setAttribute("readonly", "readonly");
-    }
-
     var save = el("button", { class: "button button--primary", type: "submit", text: defaults.submitLabel || "Save" });
-    form.appendChild(el("div", { class: "field-row" }, [topic, slug]));
+    form.appendChild(slug);
     form.appendChild(title);
     form.appendChild(content);
     form.appendChild(save);
 
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      onSubmit({ topic: topic.value, slug: slug.value, title: title.value, content: content.value });
+      onSubmit({ slug: slug.value, title: title.value, content: content.value });
     });
 
     return form;
@@ -136,7 +130,7 @@
                 alert("Could not create page: " + (result.data.error || "unknown error"));
                 return;
               }
-              navigate("/@" + result.data.handle + "/" + values.topic.toLowerCase() + "/" + values.slug.toLowerCase());
+              navigate("/@" + result.data.handle + "/" + result.data.slug);
             },
           );
         }),
@@ -166,21 +160,18 @@
         return;
       }
       result.data.pages.forEach(function (page) {
-        var href = "/@" + handle + "/" + page.topic + "/" + page.slug;
-        var item = el("div", { class: "page-list__item" }, [
-          el("a", { href: href, "data-nav": "true", text: page.title }),
-          el("span", { class: "page-list__topic", text: page.topic }),
-        ]);
+        var href = "/@" + handle + "/" + page.slug;
+        var item = el("div", { class: "page-list__item" }, [el("a", { href: href, "data-nav": "true", text: page.title })]);
         list.appendChild(item);
       });
     });
   }
 
-  function renderPage(handle, topic, slug) {
+  function renderPage(handle, slug) {
     app.textContent = "";
     var isOwner = me && me.signedIn && me.user.handle === handle;
 
-    api("/pages/@" + handle + "/" + topic + "/" + slug).then(function (result) {
+    api("/pages/@" + handle + "/" + slug).then(function (result) {
       if (!result.ok) {
         app.appendChild(el("section", { class: "section-head" }, [el("h1", { class: "section-head__title", text: "Not found" })]));
         return;
@@ -188,7 +179,7 @@
       var page = result.data.page;
       var head = el("section", { class: "section-head" });
       head.appendChild(el("h1", { class: "section-head__title", text: page.title }));
-      head.appendChild(el("p", { class: "section-head__lead", text: "@" + handle + " / " + topic }));
+      head.appendChild(el("p", { class: "section-head__lead", text: "@" + handle }));
       app.appendChild(head);
 
       var body = el("div", { class: "page-body" });
@@ -200,22 +191,19 @@
         editButton.addEventListener("click", function () {
           body.hidden = true;
           editButton.hidden = true;
-          var form = pageForm(
-            { topic: topic, slug: slug, title: page.title, content: page.content, lockTopicSlug: true, submitLabel: "Save" },
-            function (values) {
-              api("/pages/@" + handle + "/" + topic + "/" + slug, {
-                method: "PUT",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ title: values.title, content: values.content }),
-              }).then(function (saveResult) {
-                if (!saveResult.ok) {
-                  alert("Could not save: " + (saveResult.data.error || "unknown error"));
-                  return;
-                }
-                render();
-              });
-            },
-          );
+          var form = pageForm({ slug: slug, title: page.title, content: page.content, submitLabel: "Save" }, function (values) {
+            api("/pages/@" + handle + "/" + slug, {
+              method: "PUT",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify(values),
+            }).then(function (saveResult) {
+              if (!saveResult.ok) {
+                alert("Could not save: " + (saveResult.data.error || "unknown error"));
+                return;
+              }
+              navigate("/@" + handle + "/" + saveResult.data.slug);
+            });
+          });
           app.appendChild(form);
         });
         app.appendChild(editButton);
@@ -227,7 +215,7 @@
     var route = parseRoute(location.pathname);
     if (route.type === "home") renderHome();
     else if (route.type === "user") renderUser(route.handle);
-    else if (route.type === "page") renderPage(route.handle, route.topic, route.slug);
+    else if (route.type === "page") renderPage(route.handle, route.slug);
     else {
       app.textContent = "";
       app.appendChild(el("section", { class: "section-head" }, [el("h1", { class: "section-head__title", text: "Not found" })]));

@@ -12,8 +12,10 @@ this repository.
 ```
 index.html, app.js, style.css, 404.html   The static shell -- a client-side
                                            router (no build step) that renders
-                                           /, /@handle, and /@handle/topic/slug
-                                           and calls the API below.
+                                           /, /@handle, and /@handle/page-name
+                                           and calls the API below. A page name
+                                           is the only identifier under a user
+                                           for now; topic/tags may come later.
 worker/                                   The API: a Cloudflare Worker + D1
                                            database, mounted at /api/* on the
                                            same custom domain.
