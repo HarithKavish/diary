@@ -1,0 +1,28 @@
+name: Deploy Worker
+
+# Deploys the diary-api Worker (worker/) whenever it changes on main. The
+# first deploy was done manually to bring the API up during initial
+# development; this is what keeps every deploy after that declared in the
+# repository rather than run from someone's machine (standards/DEPLOYMENT.md).
+on:
+  push:
+    branches: [main]
+    paths: ["worker/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: worker
+          command: deploy
