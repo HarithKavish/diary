@@ -141,8 +141,8 @@ async function handleListPages(handle: string, env: Env): Promise<Response> {
   return json({ handle, pages });
 }
 
-async function handleGetPage(handle: string, topic: string, slug: string, env: Env): Promise<Response> {
-  const page = await getPage(env, handle, topic, slug);
+async function handleGetPage(handle: string, slug: string, env: Env): Promise<Response> {
+  const page = await getPage(env, handle, slug);
   if (!page) return json({ error: "not_found" }, 404);
   return json({ handle, page });
 }
@@ -151,40 +151,33 @@ async function handleCreatePage(request: Request, env: Env): Promise<Response> {
   const user = await getSessionUser(env, request);
   if (!user) return json({ error: "not_signed_in" }, 401);
 
-  const body = await request
-    .json<{ topic?: string; slug?: string; title?: string; content?: string }>()
-    .catch(() => null);
-  if (!body?.topic || !body.slug || !body.title) {
-    return json({ error: "topic_slug_and_title_required" }, 400);
+  const body = await request.json<{ slug?: string; title?: string; content?: string }>().catch(() => null);
+  if (!body?.slug || !body.title) {
+    return json({ error: "page_name_and_title_required" }, 400);
   }
 
   const result = await createPage(env, user.id, {
-    topic: body.topic,
     slug: body.slug,
     title: body.title,
     content: body.content ?? "",
   });
   if (!result.ok) return json({ error: result.error }, 400);
-  return json({ ok: true, id: result.id, handle: user.handle }, 201);
+  return json({ ok: true, id: result.id, slug: result.slug, handle: user.handle }, 201);
 }
 
-async function handleUpdatePage(
-  request: Request,
-  env: Env,
-  handle: string,
-  topic: string,
-  slug: string,
-): Promise<Response> {
+async function handleUpdatePage(request: Request, env: Env, handle: string, slug: string): Promise<Response> {
   const user = await getSessionUser(env, request);
   if (!user) return json({ error: "not_signed_in" }, 401);
 
-  const body = await request.json<{ title?: string; content?: string }>().catch(() => null);
+  const body = await request.json<{ slug?: string; title?: string; content?: string }>().catch(() => null);
   if (!body) return json({ error: "invalid_body" }, 400);
 
-  const result = await updatePage(env, user.id, handle, topic, slug, body);
-  if (result === "not_found") return json({ error: "not_found" }, 404);
-  if (result === "forbidden") return json({ error: "forbidden" }, 403);
-  return json({ ok: true });
+  const result = await updatePage(env, user.id, handle, slug, body);
+  if (!result.ok) {
+    const status = result.error === "not_found" ? 404 : result.error === "forbidden" ? 403 : 400;
+    return json({ error: result.error }, status);
+  }
+  return json({ ok: true, slug: result.slug });
 }
 
 export default {
@@ -200,13 +193,13 @@ export default {
     if (path === "/api/me/handle" && method === "PATCH") return handleChangeHandle(request, env);
     if (path === "/api/pages" && method === "POST") return handleCreatePage(request, env);
 
-    // /api/pages/@handle -> list; /api/pages/@handle/topic/slug -> single page
-    const pageMatch = path.match(/^\/api\/pages\/@([^/]+)(?:\/([^/]+)\/([^/]+))?$/);
+    // /api/pages/@handle -> list; /api/pages/@handle/page-name -> single page
+    const pageMatch = path.match(/^\/api\/pages\/@([^/]+)(?:\/([^/]+))?$/);
     if (pageMatch) {
-      const [, handle, topic, slug] = pageMatch;
-      if (!topic && method === "GET") return handleListPages(handle, env);
-      if (topic && slug && method === "GET") return handleGetPage(handle, topic, slug, env);
-      if (topic && slug && method === "PUT") return handleUpdatePage(request, env, handle, topic, slug);
+      const [, handle, slug] = pageMatch;
+      if (!slug && method === "GET") return handleListPages(handle, env);
+      if (slug && method === "GET") return handleGetPage(handle, slug, env);
+      if (slug && method === "PUT") return handleUpdatePage(request, env, handle, slug);
     }
 
     return json({ error: "not_found" }, 404);
