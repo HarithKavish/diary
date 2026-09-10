@@ -26,19 +26,17 @@
             brand-href="https://harithkavish.com/"
             brand-mark="https://harithkavish.com/favicon.svg"></harith-header>
 
-        <main class="site-main" id="main">
-            <section class="section-head">
-                <h1 class="section-head__title">Diary</h1>
-                <p class="section-head__lead">
-                    A personal journal. Entries are on their way &mdash; nothing is
-                    published here yet.
-                </p>
-            </section>
-        </main>
+        <div class="diary-auth-bar">
+            <div id="auth-area"></div>
+        </div>
+
+        <main class="site-main" id="app"></main>
 
         <harith-footer
             copyright-text="Harith Kavish"
             links='[{"label":"Home","href":"https://harithkavish.com/"}]'></harith-footer>
     </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
