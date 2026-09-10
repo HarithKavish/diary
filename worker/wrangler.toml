@@ -1,0 +1,20 @@
+name = "diary-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# Intercepts only /api/* on the custom domain; everything else falls through
+# to GitHub Pages, which serves the static shell (standards/DEPLOYMENT.md:
+# the deployment path must be declared in the repository, not a platform
+# setting -- this route is that declaration for the API half).
+routes = [
+  { pattern = "diary.harithkavish.com/api/*", zone_name = "harithkavish.com" },
+]
+
+# Created with: npx wrangler d1 create diary
+[[d1_databases]]
+binding = "DB"
+database_name = "diary"
+database_id = "17679c69-e57f-4ca7-953d-ba43b09b086c"
+
+# Secrets (never in this file -- set with `npx wrangler secret put <NAME>`):
+#   OAUTH_SECRET_DIARY -- must match account.harithkavish.com's client secret for `diary`

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Diary</title>
+    <!--
+      GitHub Pages has no server-side routing: a direct request for
+      /@handle/topic/slug has no matching file, so GitHub serves this 404
+      page instead. It hands the real path to index.html as a query string,
+      which restores it with history.replaceState before rendering -- the
+      standard "SPA on GitHub Pages" trick (spa-github-pages).
+    -->
+    <script>
+        var path = location.pathname + location.search + location.hash;
+        location.replace('/?redirect=' + encodeURIComponent(path));
+    </script>
+</head>
+<body></body>
+</html>
