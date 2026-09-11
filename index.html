@@ -20,15 +20,19 @@
 </head>
 <body data-page="diary">
     <div class="site-shell">
+        <!-- #auth-area is authored INSIDE harith-header, not a sibling bar: the
+             design system's identity-slot mechanism (readme.md "Anything
+             authored inside <harith-header> ... is moved into
+             .site-header__actions") relocates it into the header's own actions
+             row automatically. Diary's own real sign-in stays a separate,
+             app-owned control -- this only changes where its DOM node lives. -->
         <harith-header
             site-title="Harith Kavish"
             site-tagline="Diary"
             brand-href="https://harithkavish.com/"
-            brand-mark="https://harithkavish.com/favicon.svg"></harith-header>
-
-        <div class="diary-auth-bar">
+            brand-mark="https://harithkavish.com/favicon.svg">
             <div id="auth-area"></div>
-        </div>
+        </harith-header>
 
         <main class="site-main" id="app"></main>
 
