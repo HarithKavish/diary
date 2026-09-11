@@ -8,27 +8,31 @@
     <meta name="theme-color" content="#f5f1ea" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0b1014" media="(prefers-color-scheme: dark)">
     <!-- The shared design system, then only what this page adds on top. -->
-    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/tokens.css?v=20260829.8">
-    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/base.css?v=20260829.8">
-    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/components.css?v=20260829.8">
-    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/utils.css?v=20260829.8">
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/tokens.css?v=20260911.2">
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/base.css?v=20260911.2">
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/components.css?v=20260911.2">
+    <link rel="stylesheet" href="https://harithkavish.com/design-system/v1.0.0/utils.css?v=20260911.2">
     <link rel="stylesheet" href="style.css">
-    <script src="https://harithkavish.com/design-system/v1.0.0/harith-store.js?v=20260829.8"></script>
-    <script src="https://harithkavish.com/design-system/v1.0.0/theme-toggle.js?v=20260829.8"></script>
-    <script src="https://harithkavish.com/design-system/v1.0.0/harith-shell.js?v=20260829.8"></script>
+    <script src="https://harithkavish.com/design-system/v1.0.0/harith-store.js?v=20260911.2"></script>
+    <script src="https://harithkavish.com/design-system/v1.0.0/theme-toggle.js?v=20260911.2"></script>
+    <script src="https://harithkavish.com/design-system/v1.0.0/harith-shell.js?v=20260911.2"></script>
     <title>Diary — Harith Kavish</title>
 </head>
 <body data-page="diary">
     <div class="site-shell">
+        <!-- #auth-area is authored INSIDE harith-header, not a sibling bar: the
+             design system's identity-slot mechanism (readme.md "Anything
+             authored inside <harith-header> ... is moved into
+             .site-header__actions") relocates it into the header's own actions
+             row automatically. Diary's own real sign-in stays a separate,
+             app-owned control -- this only changes where its DOM node lives. -->
         <harith-header
             site-title="Harith Kavish"
             site-tagline="Diary"
             brand-href="https://harithkavish.com/"
-            brand-mark="https://harithkavish.com/favicon.svg"></harith-header>
-
-        <div class="diary-auth-bar">
+            brand-mark="https://harithkavish.com/favicon.svg">
             <div id="auth-area"></div>
-        </div>
+        </harith-header>
 
         <main class="site-main" id="app"></main>
 
