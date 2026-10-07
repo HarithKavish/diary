@@ -27,6 +27,12 @@ async function handleLogin(request: Request): Promise<Response> {
   const state = randomToken(16);
   // Where to send the browser back to once signed in -- defaults home.
   const next = url.searchParams.get("next") ?? "/";
+  // A silent probe: the front page uses this to check "is this visitor
+  // already signed in anywhere in the ecosystem?" via a real top-level
+  // navigation (required -- the shared session cookie is SameSite=Lax, so it
+  // is only ever sent on a genuine top-level navigation, never a background
+  // fetch or an iframe). See handleCallback for the quiet return path.
+  const silent = url.searchParams.get("silent") === "1";
 
   const authorize = new URL(AUTHORIZE_URL);
   authorize.searchParams.set("client_id", OAUTH_CLIENT_ID);
@@ -35,6 +41,7 @@ async function handleLogin(request: Request): Promise<Response> {
   authorize.searchParams.set("code_challenge", challenge);
   authorize.searchParams.set("code_challenge_method", "S256");
   authorize.searchParams.set("state", state);
+  if (silent) authorize.searchParams.set("prompt", "none");
 
   const cookieBase = "Path=/api/auth/callback; HttpOnly; Secure; SameSite=Lax; Max-Age=300";
   return new Response(null, {
@@ -65,10 +72,22 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
+  const next = decodeURIComponent(readCookie(request, "diary_oauth_next") ?? "/");
+
+  if (url.searchParams.get("error")) {
+    // login_required is prompt=none's own, expected way of saying "not signed
+    // in" -- a silent probe never shows this to anyone, it just lands back
+    // where it started, still signed out. A non-silent attempt never sends
+    // prompt=none, so in practice this is the only error code that reaches
+    // here, and it is never a failure worth a page for.
+    return new Response(null, {
+      status: 302,
+      headers: [["Location", next], ...clearTempCookies.map((c) => ["Set-Cookie", c] as const)],
+    });
+  }
 
   const expectedState = readCookie(request, "diary_oauth_state");
   const verifier = readCookie(request, "diary_oauth_verifier");
-  const next = decodeURIComponent(readCookie(request, "diary_oauth_next") ?? "/");
 
   if (!code || !state || !expectedState || state !== expectedState || !verifier) {
     return loginFailure("invalid or expired sign-in attempt -- please try again");
