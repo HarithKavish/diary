@@ -76,18 +76,34 @@ jobs:
             exit 1
           fi
 
+          # The head commit's timestamp: a review older than it reviewed older code.
+          pushed_at=$(gh api "repos/$REPO/commits/$SHA" --jq '.commit.committer.date')
+          echo "head commit: $SHA at $pushed_at"
+
           deadline=$(( $(date +%s) + WAIT_MINUTES * 60 ))
           while :; do
             runs=$(gh api "repos/$REPO/commits/$SHA/check-runs?per_page=100" \
                      --jq '[.check_runs[] | select(.name=="review")]')
             status=$(printf '%s' "$runs" | jq -r '.[0].status // "absent"')
             concl=$(printf '%s' "$runs" | jq -r '.[0].conclusion // "none"')
-            echo "review check: status=$status conclusion=$concl"
+
+            # A GREEN CHECK IS NOT A REVIEW. When the action refuses -- an unlisted bot,
+            # a workflow it will not judge -- the job still exits 0 and the check turns
+            # green having reviewed nothing. Observed on api#18: success in 11 seconds,
+            # no review posted. So require the reviewer's own evidence, posted after the
+            # commit it is meant to have read.
+            spoke=$(gh api "repos/$REPO/issues/$PR/comments?per_page=100" --paginate \
+                      --jq "[.[] | select(.user.login==\"claude[bot]\") | select(.created_at > \"$pushed_at\")] | length" 2>/dev/null)
+            echo "review check: status=$status conclusion=$concl | reviewer comments since head: ${spoke:-0}"
 
             case "$status:$concl" in
               completed:success)
-                echo "✓ reviewed and passed."
-                exit 0 ;;
+                if [ "${spoke:-0}" -gt 0 ]; then
+                  echo "✓ reviewed and passed."
+                  exit 0
+                fi
+                echo "::error::The review check is green but the reviewer never posted anything for this commit, which means it did not run -- the silent refusal from issue #90. Most often allowed_bots does not name the author. Fix the workflow in this repository, then push again."
+                exit 1 ;;
               completed:skipped|completed:neutral)
                 echo "::error::The review check reported '$concl' rather than running. Most often this is the reviewer refusing a bot-authored pull request because allowed_bots does not name it -- the failure that left 54 repositories unreviewed for a month. Fix the workflow, then re-run."
                 exit 1 ;;
