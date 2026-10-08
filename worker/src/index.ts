@@ -18,16 +18,16 @@ function callbackUri(url: URL): string {
   return `${url.origin}/api/auth/callback`;
 }
 
-function isValidNext(next: string, origin: string): boolean {
+function safeNext(next: string, origin: string): string {
   try {
     const url = new URL(next, origin);
     // Must be same origin
-    if (url.origin !== origin) return false;
-    // We accept the whole URL (pathname, search, hash) but ensure it is same origin.
-    // The validated next is the pathname, search, and hash.
-    return true;
+    if (url.origin !== origin) return "/";
+    // Return the pathname, search, and hash (the sanitized next)
+    return url.pathname + url.search + url.hash;
   } catch {
-    return false;
+    // If URL is invalid or any error, treat as invalid
+    return "/";
   }
 }
 
@@ -40,7 +40,7 @@ async function handleLogin(request: Request): Promise<Response> {
   const state = randomToken(16);
   // Where to send the browser back to once signed in -- defaults home.
   const nextFromUrl = url.searchParams.get("next") ?? "/";
-  const next = isValidNext(nextFromUrl, url.origin) ? nextFromUrl : "/";
+  const next = safeNext(nextFromUrl, url.origin);
   // A silent probe: the front page uses this to check "is this visitor
   // already signed in anywhere in the ecosystem?" via a real top-level
   // navigation (required -- the shared session cookie is SameSite=Lax, so it
@@ -93,7 +93,7 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
     // If cookie is malformed, treat as invalid
     rawNext = "/";
   }
-  const next = isValidNext(rawNext, url.origin) ? rawNext : "/";
+  const next = safeNext(rawNext, url.origin);
 
   if (url.searchParams.get("error")) {
     // login_required is prompt=none's own, expected way of saying "not signed
