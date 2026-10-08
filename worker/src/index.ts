@@ -17,7 +17,6 @@ function json(data: unknown, status = 200, extraHeaders: HeadersInit = {}): Resp
 function callbackUri(url: URL): string {
   return `${url.origin}/api/auth/callback`;
 }
-
 function safeNext(next: string, origin: string): string {
   try {
     const u = new URL(next, origin);
@@ -26,6 +25,7 @@ function safeNext(next: string, origin: string): string {
     return "/";
   }
 }
+
 
 async function handleLogin(request: Request): Promise<Response> {
   const url = new URL(request.url);
