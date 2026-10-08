@@ -17,6 +17,18 @@ function json(data: unknown, status = 200, extraHeaders: HeadersInit = {}): Resp
 function callbackUri(url: URL): string {
   return `${url.origin}/api/auth/callback`;
 }
+function safeNext(next: string, origin: string): string {
+  try {
+    const u = new URL(next, origin);
+    if (u.origin !== origin) return "/";
+    // Reject protocol-relative paths (//evil.com) that browsers treat as cross-origin
+    if (u.pathname.startsWith("//")) return "/";
+    return u.pathname + u.search + u.hash;
+  } catch {
+    return "/";
+  }
+}
+
 
 async function handleLogin(request: Request): Promise<Response> {
   const url = new URL(request.url);
@@ -26,7 +38,8 @@ async function handleLogin(request: Request): Promise<Response> {
   const challenge = await codeChallengeFor(verifier);
   const state = randomToken(16);
   // Where to send the browser back to once signed in -- defaults home.
-  const next = url.searchParams.get("next") ?? "/";
+  const nextFromUrl = url.searchParams.get("next") ?? "/";
+  const next = safeNext(nextFromUrl, url.origin);
   // A silent probe: the front page uses this to check "is this visitor
   // already signed in anywhere in the ecosystem?" via a real top-level
   // navigation (required -- the shared session cookie is SameSite=Lax, so it
@@ -72,7 +85,14 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const next = decodeURIComponent(readCookie(request, "diary_oauth_next") ?? "/");
+  let rawNext = "/";
+  try {
+    rawNext = decodeURIComponent(readCookie(request, "diary_oauth_next") ?? "/");
+  } catch {
+    // If cookie is malformed, treat as invalid
+    rawNext = "/";
+  }
+  const next = safeNext(rawNext, url.origin);
 
   if (url.searchParams.get("error")) {
     // login_required is prompt=none's own, expected way of saying "not signed
