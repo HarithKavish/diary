@@ -55,6 +55,7 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha }}
+          DEFAULT: ${{ github.event.repository.default_branch }}
           OWNER: ${{ github.repository_owner }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
           # Minutes to wait for the reviewer. A review is several minutes of model
@@ -63,9 +64,24 @@ jobs:
         run: |
           set -uo pipefail
 
-          touches_workflows=$(gh api "repos/$REPO/pulls/$PR/files" --paginate \
-                                --jq '[.[] | select(.filename | startswith(".github/workflows/"))] | length')
-          echo "files touching .github/workflows: $touches_workflows"
+          # A workflow change the reviewer will not judge needs the owner. But a workflow
+          # file that is IDENTICAL to the default branch's was already accepted there --
+          # a promotion carrying development's workflows to runway is the common case --
+          # and the reviewer does run on it, so it goes through the verdict like anything
+          # else. Only workflow files that differ from the default branch count.
+          touches_workflows=0
+          for wf in $(gh api "repos/$REPO/pulls/$PR/files" --paginate \
+                        --jq '.[] | select(.filename | startswith(".github/workflows/")) | .filename'); do
+            at_head=$(gh api "repos/$REPO/contents/$wf?ref=$SHA" --jq .sha 2>/dev/null || true)
+            at_default=$(gh api "repos/$REPO/contents/$wf?ref=$DEFAULT" --jq .sha 2>/dev/null || true)
+            if [ -n "$at_head" ] && [ "$at_head" = "$at_default" ]; then
+              echo "  $wf: identical to $DEFAULT -- already accepted there"
+            else
+              echo "  $wf: differs from $DEFAULT"
+              touches_workflows=$((touches_workflows + 1))
+            fi
+          done
+          echo "workflow files that differ from $DEFAULT: $touches_workflows"
 
           if [ "${touches_workflows:-0}" -gt 0 ]; then
             # The reviewer will not judge a change to itself, so this needs the owner's
