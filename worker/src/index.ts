@@ -140,7 +140,7 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
     .run();
 
   const sessionCookie = await createSession(env, profile.sub);
-  const destination = next === "/" ? `/@${handle}` : next;
+  const destination = next === `${url.origin}/` ? `/@${handle}` : next;
 
   return new Response(null, {
     status: 302,
