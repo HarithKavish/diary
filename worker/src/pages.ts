@@ -75,7 +75,7 @@ export async function updatePage(
   handle: string,
   currentSlug: string,
   input: { slug?: string; title?: string; content?: string },
-): Promise<{ ok: true; slug: string } | { ok: false; error: "not_found" | "forbidden" | "invalid_page_name" | "already_exists" }> {
+): Promise<{ ok: true; slug: string } | { ok: false; error: "not_found" | "forbidden" | "invalid_page_name" | "already_exists" | "title_required" }> {
   const row = await env.DB.prepare(
     `SELECT p.user_id FROM pages p JOIN users u ON u.id = p.user_id
      WHERE u.handle = ? AND p.slug = ?`,
@@ -98,6 +98,7 @@ export async function updatePage(
   }
 
   const title = input.title?.trim();
+  if (!title) return { ok: false, error: "title_required" };
   await env.DB.prepare(
     `UPDATE pages SET
        slug = ?,
