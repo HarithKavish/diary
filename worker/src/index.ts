@@ -20,13 +20,9 @@ function callbackUri(url: URL): string {
 
 function safeNext(next: string, origin: string): string {
   try {
-    const url = new URL(next, origin);
-    // Must be same origin
-    if (url.origin !== origin) return "/";
-    // Return the full URL (same origin, safe to redirect)
-    return url.href;
+    const u = new URL(next, origin);
+    return u.origin === origin ? u.pathname + u.search + u.hash : "/";
   } catch {
-    // If URL is invalid or any error, treat as invalid
     return "/";
   }
 }
@@ -140,9 +136,7 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
     .run();
 
   const sessionCookie = await createSession(env, profile.sub);
-  const nextUrl = new URL(next);
-  const isRoot = nextUrl.pathname === "/" && nextUrl.search === "" && nextUrl.hash === "";
-  const destination = isRoot ? `/@${handle}` : next;
+  const destination = next === "/" ? `/@${handle}` : next;
 
   return new Response(null, {
     status: 302,
