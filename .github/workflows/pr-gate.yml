@@ -134,9 +134,12 @@ jobs:
             # PASS passes. HOLD -- correct, but touching credentials or secrets -- passes on
             # the owner's approval. FAIL, or no verdict, does not.
             said=$(gh api "repos/$REPO/issues/$PR/comments?per_page=100" \
-                     --jq "[.[] | select(.user.login==\"claude[bot]\") | select(.created_at > \"$pushed_at\") | .body] | last // empty" 2>/dev/null)
+                     --jq "[.[] | select(.user.login==\"claude[bot]\") | select(.created_at > \"$pushed_at\") | .body] | last // empty" 2>/dev/null || true)
+            # `|| true`: Actions runs this under bash -e whatever `set` says above, and grep
+            # finding nothing -- no review posted yet -- would kill the gate silently. It
+            # did, on diary#13, on the first pass of this loop.
             verdict=$(printf '%s\n' "$said" | grep -m1 -oiE '^[^A-Za-z]*VERDICT:[[:space:]]*(PASS|FAIL|HOLD)' \
-                        | grep -oiE 'PASS|FAIL|HOLD' | tr '[:lower:]' '[:upper:]')
+                        | grep -oiE 'PASS|FAIL|HOLD' | tr '[:lower:]' '[:upper:]' || true)
             echo "review check: status=$status conclusion=$concl | verdict on this commit: ${verdict:-none}"
 
             case "$status:$concl" in
@@ -147,7 +150,7 @@ jobs:
                     exit 0 ;;
                   HOLD)
                     approvals=$(gh api "repos/$REPO/pulls/$PR/reviews" --paginate \
-                                  --jq "[.[] | select(.state==\"APPROVED\") | .user.login] | unique | join(\",\")")
+                                  --jq "[.[] | select(.state==\"APPROVED\") | .user.login] | unique | join(\",\")" || true)
                     case ",${approvals}," in
                       *",$OWNER,"*) echo "✓ held for $OWNER, and $OWNER approved it."; exit 0 ;;
                     esac
