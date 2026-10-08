@@ -22,12 +22,12 @@ function safeNext(next: string, origin: string): string {
   try {
     const url = new URL(next, origin);
     // Must be same origin
-    if (url.origin !== origin) return "/";
+    if (url.origin !== origin) return `${origin}/`;
     // Return the full URL (same origin, safe to redirect)
     return url.href;
   } catch {
     // If URL is invalid or any error, treat as invalid
-    return "/";
+    return `${origin}/`;
   }
 }
 
