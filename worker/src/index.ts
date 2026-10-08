@@ -16,6 +16,15 @@ function json(data: unknown, status = 200, extraHeaders: HeadersInit = {}): Resp
 
 function callbackUri(url: URL): string {
   return `${url.origin}/api/auth/callback`;
+
+function isValidNext(next: string): boolean {
+  if (!next.startsWith("/")) return false;
+  if (next.startsWith("//")) return false;
+  if (next.startsWith("/\\")) return false;
+  if (next.includes("://")) return false;
+  return true;
+}
+
 }
 
 async function handleLogin(request: Request): Promise<Response> {
@@ -26,7 +35,8 @@ async function handleLogin(request: Request): Promise<Response> {
   const challenge = await codeChallengeFor(verifier);
   const state = randomToken(16);
   // Where to send the browser back to once signed in -- defaults home.
-  const next = url.searchParams.get("next") ?? "/";
+  const nextFromUrl = url.searchParams.get("next") ?? "/";
+  const next = isValidNext(nextFromUrl) ? nextFromUrl : "/";
   // A silent probe: the front page uses this to check "is this visitor
   // already signed in anywhere in the ecosystem?" via a real top-level
   // navigation (required -- the shared session cookie is SameSite=Lax, so it
@@ -72,9 +82,15 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  const next = decodeURIComponent(readCookie(request, "diary_oauth_next") ?? "/");
+  const rawNext = decodeURIComponent(readCookie(request, "diary_oauth_next") ?? "/");
+  const next = isValidNext(rawNext) ? rawNext : "/";
 
   if (url.searchParams.get("error")) {
+    const stateFromUrl = url.searchParams.get("state");
+    const expectedState = readCookie(request, "diary_oauth_state");
+    if (!stateFromUrl || stateFromUrl !== expectedState) {
+      return loginFailure("invalid state");
+    }
     // login_required is prompt=none's own, expected way of saying "not signed
     // in" -- a silent probe never shows this to anyone, it just lands back
     // where it started, still signed out. A non-silent attempt never sends
