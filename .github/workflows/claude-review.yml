@@ -47,7 +47,9 @@ concurrency:
 permissions:
   contents: write
   pull-requests: write
-  issues: read
+  # issues: write (not read) since 2026-09-10 -- see the closing-keyword note
+  # on claude_args below. This job now closes issues itself.
+  issues: write
   # Required for claude-code-action's OAuth token exchange. Without this the
   # step fails after 3 retries with "Could not fetch an OIDC token" and never
   # reviews anything (confirmed 2026-09-03 on jarvis-github-control PR #2).
@@ -66,7 +68,12 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: 'jarvis-harithkavish,claude'
           track_progress: true
-          claude_args: '--allowedTools "Bash(gh pr merge:*)"'
+          # gh issue close added 2026-09-10 -- see the closing-keyword note in the
+          # prompt below. Merges here target development, not this repo's default
+          # branch (main), so GitHub's own Closes/Fixes/Resolves keyword handling
+          # never fires; issue #61 sat open for hours after its own fix merged
+          # because of exactly this, found and filed as issue #65.
+          claude_args: '--allowedTools "Bash(gh pr merge:*),Bash(gh issue close:*)"'
           prompt: |
             Review this pull request for correctness bugs and post your findings
             as a PR comment. Lead with real defects; do not pad with style nits.
@@ -101,3 +108,8 @@ jobs:
             A FAIL or a HOLD with clear reasons is a complete and successful review,
             not a failure to finish. When in doubt, FAIL: a pull request left open
             is always safe, a merged bad one is not.
+
+            Since 2026-10-08 development is this repository's default branch, so
+            Closes/Fixes/Resolves #N in a pull request body closes the issue when it
+            merges into development -- GitHub does that itself; there is no need to
+            close issues by hand any more.
