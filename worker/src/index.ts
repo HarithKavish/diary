@@ -23,8 +23,8 @@ function safeNext(next: string, origin: string): string {
     const url = new URL(next, origin);
     // Must be same origin
     if (url.origin !== origin) return "/";
-    // Return the pathname, search, and hash (the sanitized next)
-    return url.pathname + url.search + url.hash;
+    // Return the full URL (same origin, safe to redirect)
+    return url.href;
   } catch {
     // If URL is invalid or any error, treat as invalid
     return "/";
