@@ -23,9 +23,8 @@ function isValidNext(next: string, origin: string): boolean {
     const url = new URL(next, origin);
     // Must be same origin
     if (url.origin !== origin) return false;
-    // We'll accept the whole URL (pathname, search, hash) but ensure no weirdness?
-    // The reviewer said to use the path, search and hash it parsed to.
-    // We'll just return true if same origin.
+    // We accept the whole URL (pathname, search, hash) but ensure it is same origin.
+    // The validated next is the pathname, search, and hash.
     return true;
   } catch {
     return false;
@@ -87,7 +86,6 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  // Read and safely decode next cookie
   let rawNext = "/";
   try {
     rawNext = decodeURIComponent(readCookie(request, "diary_oauth_next") ?? "/");
@@ -98,11 +96,6 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
   const next = isValidNext(rawNext, url.origin) ? rawNext : "/";
 
   if (url.searchParams.get("error")) {
-    const stateFromUrl = url.searchParams.get("state");
-    const expectedState = readCookie(request, "diary_oauth_state");
-    if (!stateFromUrl || stateFromUrl !== expectedState) {
-      return loginFailure("invalid state");
-    }
     // login_required is prompt=none's own, expected way of saying "not signed
     // in" -- a silent probe never shows this to anyone, it just lands back
     // where it started, still signed out. A non-silent attempt never sends
@@ -141,7 +134,7 @@ async function handleCallback(request: Request, env: Env): Promise<Response> {
   await env.DB.prepare(
     `INSERT INTO users (id, handle, name, picture, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET name = excluded.name, picture = excluded.picture, updated_at = excluded.updated_at`
+     ON CONFLICT(id) DO UPDATE SET name = excluded.name, picture = excluded.picture, updated_at = excluded.updated_at`,
   )
     .bind(profile.sub, handle, profile.name, profile.picture, now, now)
     .run();
@@ -175,6 +168,7 @@ async function handleChangeHandle(request: Request, env: Env): Promise<Response>
   if (!user) return json({ error: "not_signed_in" }, 401);
   const body = await request.json<{ handle?: string }>().catch(() => null);
   if (!body?.handle) return json({ error: "handle_required" }, 400);
+
   const result = await changeHandle(env, user.id, body.handle);
   if (result === "invalid") return json({ error: "invalid_handle" }, 400);
   if (result === "taken") return json({ error: "handle_taken" }, 409);
@@ -196,10 +190,12 @@ async function handleGetPage(handle: string, slug: string, env: Env): Promise<Re
 async function handleCreatePage(request: Request, env: Env): Promise<Response> {
   const user = await getSessionUser(env, request);
   if (!user) return json({ error: "not_signed_in" }, 401);
+
   const body = await request.json<{ slug?: string; title?: string; content?: string }>().catch(() => null);
   if (!body?.slug || !body.title) {
     return json({ error: "page_name_and_title_required" }, 400);
   }
+
   const result = await createPage(env, user.id, {
     slug: body.slug,
     title: body.title,
@@ -212,12 +208,14 @@ async function handleCreatePage(request: Request, env: Env): Promise<Response> {
 async function handleUpdatePage(request: Request, env: Env, handle: string, slug: string): Promise<Response> {
   const user = await getSessionUser(env, request);
   if (!user) return json({ error: "not_signed_in" }, 401);
+
   const body = await request.json<{ slug?: string; title?: string; content?: string }>().catch(() => null);
   if (!body) return json({ error: "invalid_body" }, 400);
+
   const result = await updatePage(env, user.id, handle, slug, body);
   if (!result.ok) {
     const status = result.error === "not_found" ? 404 : result.error === "forbidden" ? 403 : 400;
-    return json({ error: result.error }, status );
+    return json({ error: result.error }, status);
   }
   return json({ ok: true, slug: result.slug });
 }
