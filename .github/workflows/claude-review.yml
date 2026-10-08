@@ -73,31 +73,31 @@ jobs:
 
             This pull request targets: ${{ github.event.pull_request.base.ref }}
 
-            Then decide on merging.
+            Begin your comment with exactly one verdict, alone on its own line:
 
-            MERGE when all of these hold:
-              - you found no correctness issues
-              - the branch it targets, shown above, is `development`
-              - it does not touch credentials, authentication, or secrets
+              VERDICT: PASS   you found no correctness issues
+              VERDICT: FAIL   you found a correctness issue, however small
+              VERDICT: HOLD   it is correct, but it touches credentials,
+                              authentication or secrets -- where a mistake is not
+                              recoverable by reverting -- so Harith decides
 
-            If every condition holds, run:
-              gh pr merge --auto --squash
+            The PR gate reads that line, and nothing merges without PASS, so the
+            verdict is the decision: do not write PASS for something you would not
+            merge. Then explain your findings.
 
-            DO NOT MERGE, and say plainly why, when any of these hold:
-              - you found a correctness issue, however small
-              - it targets `runway` or `main`. Promotion to runway is a
-                release-candidate gate, and promotion to main is a deliberate
-                release act (standards/BRANCHING.md). Neither is automatic, and
-                a passing review is not authorisation to perform one.
-              - it touches credentials, authentication, or secrets, where a
-                mistake is not recoverable by reverting.
+            If, and only if, your verdict is PASS, enable auto-merge -- GitHub then
+            merges once every required check has passed:
+              into development:                      gh pr merge --auto --squash
+              into runway or main (a promotion), or
+              from a branch named sync/*:            gh pr merge --auto --merge
+            Promotions keep every commit, so development, runway and main stay one
+            history; squash-merging a promotion is what diverged them before.
 
-            Merging is no longer restricted to documentation. A code change that
-            you have reviewed and found correct may be merged into development on
-            that basis -- that is what the review is for. The restrictions above
-            are the two places where being wrong is expensive rather than
-            annoying: production promotion, and credentials.
+            A promotion is reviewed like any change: its diff is everything it
+            carries. Harith decided on 2026-10-08 that changes flow from feature to
+            development to runway to main without a person in the loop, provided
+            each one passes review and every check.
 
-            Reviewing well and declining to merge is a complete and successful
-            outcome, not a failure to finish. When in doubt, do not merge:
-            leaving a pull request open is always safe, merging a bad one is not.
+            A FAIL or a HOLD with clear reasons is a complete and successful review,
+            not a failure to finish. When in doubt, FAIL: a pull request left open
+            is always safe, a merged bad one is not.
