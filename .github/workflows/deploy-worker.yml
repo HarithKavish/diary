@@ -21,12 +21,7 @@ jobs:
         working-directory: worker
     steps:
       - uses: actions/checkout@v4
-      # Pinned to the commit SHA of the cloudflare/wrangler-action v3 tag
-      # (9acf94ace14e7dc412b076f2c5c20b8ce93c79cd), resolved live via
-      # `gh api repos/cloudflare/wrangler-action/git/ref/tags/v3` on
-      # 2026-10-12. NEVER pin a SHA you have not resolved — forge-gateway's
-      # first template carried a garbled SHA (4c732b6f...) that does not exist
-      # (SonarCloud S7637).
+      # Pinned to the commit SHA of cloudflare/wrangler-action v3 tag (9acf94ace14e7dc412b076f2c5c20b8ce93c79cd), resolved via `gh api repos/cloudflare/wrangler-action/git/ref/tags/v3` on 2026-10-12. Never pin a SHA you have not resolved.
       - uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
