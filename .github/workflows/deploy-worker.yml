@@ -21,7 +21,7 @@ jobs:
         working-directory: worker
     steps:
       - uses: actions/checkout@v4
-      # cloudflare/wrangler-action@v3 -> 9acf94ace14e7dc412b076f2c5c20b8ce93c79cd (lightweight tag, 2026-04-15), resolved 2026-10-12 via `gh api repos/cloudflare/wrangler-action/git/ref/tags/v3`
+      # cloudflare/wrangler-action v3 @ 9acf94ac... (resolved 2026-10-12)
       - uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
