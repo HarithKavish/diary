@@ -22,6 +22,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Pinned to the commit SHA of cloudflare/wrangler-action v3 tag (9acf94ace14e7dc412b076f2c5c20b8ce93c79cd), resolved via `gh api repos/cloudflare/wrangler-action/git/ref/tags/v3` on 2026-10-12. Never pin a SHA you have not resolved.
+      - name: Verify pinned SHA exists
+        run: |
+          expected_sha="9acf94ace14e7dc412b076f2c5c20b8ce93c79cd"
+          actual_sha=$(gh api repos/cloudflare/wrangler-action/git/ref/tags/v3 --jq .object.sha 2>/dev/null || echo "FAILED")
+          if [ "$actual_sha" != "$expected_sha" ]; then
+            echo "ERROR: Pinned SHA verification failed"
+            echo "Expected: $expected_sha"
+            echo "Actual:   $actual_sha"
+            exit 1
+          fi
       - uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
