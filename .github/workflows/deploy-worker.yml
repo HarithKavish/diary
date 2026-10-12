@@ -7,7 +7,7 @@ name: Deploy Worker
 on:
   push:
     branches: [main]
-    paths: [\"worker/**\"]
+    paths: ["worker/**"]
   workflow_dispatch:
 
 permissions:
@@ -21,19 +21,6 @@ jobs:
         working-directory: worker
     steps:
       - uses: actions/checkout@v4
-      - name: Verify pinned SHA exists as a commit
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          expected_sha="9acf94ace14e7dc412b076f2c5c20b8ce93c79cd"
-          status_code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/repos/cloudflare/wrangler-action/git/commits/$expected_sha)
-          if [ "$status_code" -ne 200 ]; then
-            echo "ERROR: Pinned SHA verification failed"
-            echo "Expected SHA: $expected_sha"
-            echo "HTTP status: $status_code"
-            exit 1
-          fi
       # cloudflare/wrangler-action v3 @ 9acf94ac... (resolved 2026-10-12)
       - uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd
         with:
