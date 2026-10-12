@@ -21,6 +21,7 @@ jobs:
         working-directory: worker
     steps:
       - uses: actions/checkout@v4
+      - name: Verify pinned SHA exists\n        env:\n          GITHUB_TOKEN: ${{ github.token }}\n        run: |\n          expected_sha="9acf94ace14e7dc412b076f2c5c20b8ce93c79cd"\n          actual_sha=$(curl -s -H "Authorization: token $GITHUB_TOKEN"\n            https://api.github.com/repos/cloudflare/wrangler-action/git/ref/tags/v3 |\n            jq -r .object.sha)\n          if [ "$actual_sha" != "$expected_sha" ]; then\n            echo "ERROR: Pinned SHA verification failed"\n            echo "Expected: $expected_sha"\n            echo "Actual:   $actual_sha"\n            exit 1\n          fi
       # cloudflare/wrangler-action v3 @ 9acf94ac... (resolved 2026-10-12)
       - uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd
         with:
