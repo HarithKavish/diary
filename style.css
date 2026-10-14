@@ -1,11 +1,12 @@
 /* Diary. Tokens only -- no colour of its own. */
 
-.diary-auth-bar {
-    display: flex;
-    justify-content: flex-end;
+/* #auth-area now lives inside <harith-header>'s own actions row (see
+   index.html) instead of a separate full-width bar, so it only needs to lay
+   out its own children -- the header supplies the row's alignment. */
+#auth-area {
+    display: inline-flex;
     align-items: center;
     gap: var(--space-3, 0.75rem);
-    padding: var(--space-3, 0.75rem) var(--space-5, 1.5rem);
 }
 
 .auth-name {

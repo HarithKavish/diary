@@ -7,7 +7,7 @@
     "migrate": "wrangler d1 migrations apply diary --remote"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250101.0",
+    "@cloudflare/workers-types": "^5.20261008.1",
     "wrangler": "^4.86.0"
   }
 }
