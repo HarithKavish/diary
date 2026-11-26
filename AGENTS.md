@@ -32,8 +32,8 @@ under `/@handle`. See README.md for the layout and the sign-in flow.
 - The shell (`index.html`, `app.js`, `style.css`) has no build step and no
   dependencies — edit directly.
 - The API (`worker/`) is a Cloudflare Worker. `npm install` in `worker/` before
-  editing its TypeScript; deploy is `.github/workflows/deploy-worker.yml`, not a
-  manual `wrangler deploy`, once that workflow's `CLOUDFLARE_API_TOKEN` secret is set.
+  editing its TypeScript; deploy is `.github/workflows/deploy-worker.yml` on main, not a
+  manual `wrangler deploy`.
 - Diary is a registered OAuth client of `account.harithkavish.com`
   (`lib/oauth/clients.ts` there). Changing diary's redirect URI or client id means a
   matching change on that side, coordinated as its own scoped pull request — never
