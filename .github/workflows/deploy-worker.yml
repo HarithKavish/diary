@@ -1,28 +1,71 @@
 name: Deploy Worker
 
-# Deploys the diary-api Worker (worker/) whenever it changes on main. The
-# first deploy was done manually to bring the API up during initial
-# development; this is what keeps every deploy after that declared in the
-# repository rather than run from someone's machine (standards/DEPLOYMENT.md).
+# The diary-api Worker (worker/) deploys from main through this workflow, not by hand. A pull
+# request that touches the Worker gets a dry-run build instead, so a bundle that will not build
+# is caught before it reaches main.
+#
+# wrangler is pinned and called directly. Earlier runs went through wrangler-action without a
+# version, which installs whatever wrangler it defaults to.
 on:
   push:
     branches: [main]
-    paths: ["worker/**"]
+    paths:
+      - "worker/**"
+      - ".github/workflows/deploy-worker.yml"
+  pull_request:
+    paths:
+      - "worker/**"
+      - ".github/workflows/deploy-worker.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# One deploy at a time; a newer run waits rather than racing an older one.
+concurrency:
+  group: deploy-worker-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_SEND_METRICS: "false"
+
 jobs:
-  deploy:
+  check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: worker
     steps:
       - uses: actions/checkout@v4
-      - uses: cloudflare/wrangler-action@v3
+      - uses: actions/setup-node@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          workingDirectory: worker
-          command: deploy
+          node-version: 22
+      - run: npm ci
+      - name: Build the bundle without deploying it
+        run: npx --yes wrangler@4.160.1 deploy --dry-run --outdir dist
+
+  deploy:
+    # Only main is production. A manual run from any other branch does nothing, so an unmerged
+    # branch can never end up serving diary.harithkavish.com/api.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: e336e9fbd3e20dbb26269765f036e9b8
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::The CLOUDFLARE_API_TOKEN secret is not set, so there is nothing to deploy with."
+            exit 1
+          fi
+          npx --yes wrangler@4.160.1 deploy

@@ -57,6 +57,41 @@
   });
   window.addEventListener("popstate", render);
 
+  // A non-authoritative hint, shared across the ecosystem: has this browser
+  // signed in to a HarithKavish account before, anywhere? Reading it costs
+  // nothing (a plain cookie read, no network call) and it is never trusted
+  // for anything but this -- deciding whether a silent sign-in attempt is
+  // worth making at all. Someone who has never touched the ecosystem never
+  // triggers one.
+  function hasEcosystemHint() {
+    try {
+      return !!(window.HarithStore && window.HarithStore.get("user"));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Guards against a redirect loop: if the hint is stale (this browser was
+  // signed in before, but the real session has since ended everywhere), the
+  // silent attempt fails and lands back on this exact page, hint still set --
+  // an unguarded retry would redirect forever. sessionStorage clears itself
+  // when the tab closes, so a later visit gets a fresh attempt.
+  function alreadyTriedSilentSignIn() {
+    try {
+      return sessionStorage.getItem("diary_silent_attempted") === "1";
+    } catch (e) {
+      return true; // storage blocked -- don't risk a loop, just show the button
+    }
+  }
+
+  function markSilentSignInAttempted() {
+    try {
+      sessionStorage.setItem("diary_silent_attempted", "1");
+    } catch (e) {
+      /* non-fatal */
+    }
+  }
+
   function renderAuthArea() {
     authArea.textContent = "";
     if (me && me.signedIn) {
@@ -224,6 +259,16 @@
 
   api("/me").then(function (result) {
     me = result.data;
+    if (!me.signedIn && hasEcosystemHint() && !alreadyTriedSilentSignIn()) {
+      // Worth a quiet check before ever showing "Sign in": a real top-level
+      // navigation (see hasEcosystemHint's comment for why it must be one),
+      // fast either way -- it either comes back signed in, or lands right
+      // back here still signed out, this time with the attempt marked so it
+      // is not repeated.
+      markSilentSignInAttempted();
+      location.href = "/api/auth/login?silent=1&next=" + encodeURIComponent(location.pathname);
+      return;
+    }
     renderAuthArea();
     render();
   });
